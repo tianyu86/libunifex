@@ -53,9 +53,8 @@ struct transform_sender {
   };
 
   template <typename... Args>
-  using is_overload_noexcept = std::bool_constant<noexcept(
-      std::invoke(std::declval<Func>(), std::declval<Args>()...))>;
-
+  using is_overload_noexcept = std::is_nothrow_invocable<Func, Args...>;
+ 
   template <template <typename...> class Variant>
   struct calculate_errors {
    public:

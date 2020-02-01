@@ -124,7 +124,8 @@ namespace unifex
       template <
           typename CPO,
           typename... Args,
-          std::enable_if_t<!is_receiver_cpo_v<CPO>, int> = 0>
+          std::enable_if_t<!is_receiver_cpo_v<CPO> &&
+                           std::is_invocable_v<CPO, const Receiver&, Args...>, int> = 0>
       friend auto tag_invoke(
           CPO cpo,
           const finally_value_receiver& r,
@@ -227,7 +228,8 @@ namespace unifex
       template <
           typename CPO,
           typename... Args,
-          std::enable_if_t<!is_receiver_cpo_v<CPO>, int> = 0>
+          std::enable_if_t<!is_receiver_cpo_v<CPO> &&
+                           std::is_invocable_v<CPO, const Receiver&, Args...>, int> = 0>
       friend auto tag_invoke(
           CPO cpo,
           const finally_error_receiver& r,
@@ -300,7 +302,8 @@ namespace unifex
       template <
           typename CPO,
           typename... Args,
-          std::enable_if_t<!is_receiver_cpo_v<CPO>, int> = 0>
+          std::enable_if_t<!is_receiver_cpo_v<CPO> &&
+                           std::is_invocable_v<CPO, const Receiver&, Args...>, int> = 0>
       friend auto tag_invoke(
           CPO cpo,
           const finally_done_receiver& r,
@@ -444,7 +447,8 @@ namespace unifex
       template <
           typename CPO,
           typename... Args,
-          std::enable_if_t<!is_receiver_cpo_v<CPO>, int> = 0>
+          std::enable_if_t<!is_receiver_cpo_v<CPO> &&
+                           std::is_invocable_v<CPO, const Receiver&, Args...>, int> = 0>
       friend auto
       tag_invoke(CPO cpo, const finally_receiver& r, Args&&... args) noexcept(
           std::is_nothrow_invocable_v<CPO, const Receiver&, Args...>)

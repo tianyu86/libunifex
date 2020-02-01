@@ -40,7 +40,10 @@ class with_query_value_operation {
       return r.get_value();
     }
 
-    template <typename OtherCPO, typename... Args>
+    template <
+      typename OtherCPO,
+      typename... Args,
+      std::enable_if_t<std::is_invocable_v<OtherCPO, const Receiver&, Args...>, int> = 0>
     friend auto tag_invoke(
         OtherCPO cpo, const receiver_wrapper &r,
         Args &&... args) noexcept(std::is_nothrow_invocable_v<OtherCPO,
@@ -51,7 +54,10 @@ class with_query_value_operation {
                          (Args &&) args...);
     }
 
-    template <typename OtherCPO, typename... Args>
+    template <
+       typename OtherCPO,
+      typename... Args,
+      std::enable_if_t<std::is_invocable_v<OtherCPO, Receiver&, Args...>, int> = 0>
     friend auto
     tag_invoke(OtherCPO cpo, receiver_wrapper &r, Args &&... args) noexcept(
         std::is_nothrow_invocable_v<OtherCPO, Receiver &, Args...>)
@@ -59,7 +65,10 @@ class with_query_value_operation {
       return std::invoke(std::move(cpo), r.receiver_, (Args &&) args...);
     }
 
-    template <typename OtherCPO, typename... Args>
+    template <
+      typename OtherCPO,
+      typename... Args,
+      std::enable_if_t<std::is_invocable_v<OtherCPO, Receiver, Args...>, int> = 0>
     friend auto
     tag_invoke(OtherCPO cpo, receiver_wrapper &&r, Args &&... args) noexcept(
         std::is_nothrow_invocable_v<OtherCPO, Receiver, Args...>)

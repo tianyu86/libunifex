@@ -52,7 +52,10 @@ struct connect_cpo {
     return static_cast<Sender&&>(s).connect((Receiver &&) r);
   }
 
-  template <typename Sender, typename Receiver>
+  template <
+    typename Sender,
+    typename Receiver,
+    std::enable_if_t<is_tag_invocable_v<connect_cpo, Sender, Receiver>, int> = 0>
   constexpr auto operator()(Sender&& sender, Receiver&& receiver) const
       noexcept(is_nothrow_tag_invocable_v<connect_cpo, Sender, Receiver>)
           -> tag_invoke_result_t<connect_cpo, Sender, Receiver> {

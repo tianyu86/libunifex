@@ -73,7 +73,8 @@ class submitted_operation {
 
     template <
         typename CPO,
-        std::enable_if_t<!is_receiver_cpo_v<CPO>, int> = 0>
+        std::enable_if_t<!is_receiver_cpo_v<CPO> &&
+                         std::is_invocable_v<CPO, const Receiver&>, int> = 0>
     friend auto tag_invoke(CPO cpo, const wrapped_receiver& r) noexcept(
         std::is_nothrow_invocable_v<CPO, const Receiver&>)
         -> std::invoke_result_t<CPO, const Receiver&> {

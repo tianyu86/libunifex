@@ -33,6 +33,8 @@
 
 namespace unifex {
 
+namespace detail {
+
 template<typename SourceStream, typename... Values>
 struct stop_immediately_stream {
  private:
@@ -435,9 +437,11 @@ public:
   }
 };
 
+} // namespace detail
+
 template<typename... Values, typename SourceStream>
 auto stop_immediately(SourceStream&& source) {
-  return stop_immediately_stream<std::remove_cvref_t<SourceStream>, Values...>{
+  return detail::stop_immediately_stream<std::remove_cvref_t<SourceStream>, Values...>{
     (SourceStream&&)source};
 }
 

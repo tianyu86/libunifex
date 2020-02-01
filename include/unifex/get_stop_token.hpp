@@ -22,7 +22,9 @@
 
 namespace unifex {
 
-inline constexpr struct get_stop_token_cpo {
+namespace detail {
+
+struct get_stop_token_cpo {
   template <typename T>
   auto operator()([[maybe_unused]] const T& value) const noexcept ->
       typename std::conditional_t<
@@ -38,7 +40,11 @@ inline constexpr struct get_stop_token_cpo {
       return unstoppable_token{};
     }
   }
-} get_stop_token{};
+};
+
+} // namespace detail
+
+inline constexpr detail::get_stop_token_cpo get_stop_token{};
 
 template <typename T>
 using get_stop_token_result_t =

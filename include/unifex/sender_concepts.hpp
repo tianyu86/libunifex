@@ -23,7 +23,9 @@
 
 namespace unifex {
 
-inline constexpr struct start_cpo {
+namespace detail {
+
+struct start_cpo {
   template <typename Operation>
   friend auto tag_invoke(start_cpo, Operation& op) noexcept(
       noexcept(op.start())) -> decltype(op.start()) {
@@ -40,9 +42,9 @@ inline constexpr struct start_cpo {
         "start() customisation must be noexcept");
     return tag_invoke(*this, op);
   }
-} start{};
+};
 
-inline constexpr struct connect_cpo {
+struct connect_cpo {
   template <typename Sender, typename Receiver>
   friend auto tag_invoke(connect_cpo, Sender&& s, Receiver&& r) noexcept(
       noexcept(static_cast<Sender&&>(s).connect((Receiver &&) r)))
@@ -56,7 +58,13 @@ inline constexpr struct connect_cpo {
           -> tag_invoke_result_t<connect_cpo, Sender, Receiver> {
     return tag_invoke(*this, (Sender &&) sender, (Receiver &&) receiver);
   }
-} connect{};
+};
+
+} // namespace detail
+
+
+inline constexpr detail::start_cpo start{};
+inline constexpr detail::connect_cpo connect{};
 
 template <typename Sender, typename Receiver>
 using operation_t = decltype(connect(

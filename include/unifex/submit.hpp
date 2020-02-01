@@ -27,6 +27,8 @@
 
 namespace unifex {
 
+namespace detail {
+
 template <typename Sender, typename Receiver>
 class submitted_operation {
   class wrapped_receiver {
@@ -103,7 +105,7 @@ private:
   /*UNIFEX_NO_UNIQUE_ADDRESS*/ operation_t<Sender, wrapped_receiver> inner_;
 };
 
-inline constexpr struct submit_cpo {
+struct submit_cpo {
   template<typename Sender, typename Receiver>
   void operator()(Sender&& sender, Receiver&& receiver) const {
     if constexpr (is_tag_invocable_v<submit_cpo, Sender, Receiver>) {
@@ -152,6 +154,10 @@ inline constexpr struct submit_cpo {
       }
     }
   }
-} submit;
+};
+
+} // namespace detail
+
+inline constexpr detail::submit_cpo submit{};
 
 } // namespace unifex

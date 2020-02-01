@@ -22,7 +22,9 @@
 
 namespace unifex {
 
-inline constexpr struct get_allocator_cpo {
+namespace detail {
+
+struct get_allocator_cpo {
 private:
 public:
   template <typename T>
@@ -37,7 +39,11 @@ public:
       -> tag_invoke_result_t<get_allocator_cpo, const T&> {
     return tag_invoke(*this, object);
   }
-} get_allocator;
+};
+
+} // namespace detail
+
+inline constexpr detail::get_allocator_cpo get_allocator{};
 
 template<typename T>
 using get_allocator_t = decltype(get_allocator(std::declval<T>()));

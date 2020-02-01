@@ -27,6 +27,8 @@
 
 namespace unifex {
 
+namespace detail {
+
 template <typename Sender>
 struct single_stream {
   std::optional<Sender> sender_;
@@ -105,9 +107,11 @@ struct single_stream {
   : sender_(std::in_place, (Sender2&&)sender) {}
 };
 
+} // namespace detail
+
 template <typename Sender>
 auto single(Sender&& sender) {
-  return single_stream<std::remove_cvref_t<Sender>>{(Sender&&)sender};
+  return detail::single_stream<std::remove_cvref_t<Sender>>{(Sender&&)sender};
 }
 
 } // namespace unifex

@@ -261,7 +261,6 @@ namespace unifex
             succOp_;
       };
     };
-  }  // namespace detail
 
   template <typename Predecessor, typename Successor>
   class sequence_sender {
@@ -410,7 +409,7 @@ namespace unifex
     UNIFEX_NO_UNIQUE_ADDRESS Successor successor_;
   };
 
-  inline constexpr struct sequence_cpo {
+  struct sequence_cpo {
     // Sequencing a single sender is just the same as returning the sender
     // itself.
     template <typename First>
@@ -490,5 +489,10 @@ namespace unifex
               static_cast<First&&>(first), static_cast<Second&&>(second)),
           static_cast<Rest&&>(rest)...);
     }
-  } sequence;
+  };
+
+}  // namespace detail
+
+inline constexpr detail::sequence_cpo sequence{};
+
 }  // namespace unifex

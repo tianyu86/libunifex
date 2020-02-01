@@ -32,6 +32,8 @@
 
 namespace unifex {
 
+namespace detail {
+
 template <typename StreamSender, typename State, typename ReducerFunc>
 struct reduce_stream_sender {
   StreamSender stream_;
@@ -250,12 +252,14 @@ struct reduce_stream_sender {
   }
 };
 
+} // namespace detail
+
 template <typename StreamSender, typename State, typename ReducerFunc>
 auto reduce_stream(
     StreamSender&& stream,
     State&& initialState,
     ReducerFunc&& reducer) {
-  return reduce_stream_sender<
+  return detail::reduce_stream_sender<
       std::remove_cvref_t<StreamSender>,
       std::remove_cvref_t<State>,
       std::remove_cvref_t<ReducerFunc>>{(StreamSender &&) stream,

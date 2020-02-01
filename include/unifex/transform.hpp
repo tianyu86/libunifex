@@ -28,6 +28,8 @@
 
 namespace unifex {
 
+namespace detail {
+
 template <typename Predecessor, typename Func>
 struct transform_sender {
   UNIFEX_NO_UNIQUE_ADDRESS Predecessor pred_;
@@ -157,9 +159,11 @@ struct transform_sender {
   }
 };
 
+} // namespace detail
+
 template <typename Sender, typename Func>
 auto transform(Sender&& predecessor, Func&& func) {
-  return transform_sender<std::remove_cvref_t<Sender>, std::decay_t<Func>>{
+  return detail::transform_sender<std::remove_cvref_t<Sender>, std::decay_t<Func>>{
       (Sender &&) predecessor, (Func &&) func};
 }
 

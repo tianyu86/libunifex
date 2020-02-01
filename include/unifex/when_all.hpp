@@ -75,8 +75,6 @@ struct when_all_operation_tuple<Index, Receiver, First, Rest...>
   operation_t<First, Receiver<Index>> op_;
 };
 
-} // namespace detail
-
 template <typename... Senders>
 class when_all_sender {
  public:
@@ -231,7 +229,7 @@ class when_all_sender {
         Receiver&>::template callback_type<cancel_operation>>
         stopCallback_;
     Receiver receiver_;
-    detail::when_all_operation_tuple<0, element_receiver, Senders...> ops_;
+    when_all_operation_tuple<0, element_receiver, Senders...> ops_;
   };
 
  public:
@@ -287,11 +285,13 @@ class when_all_sender {
   std::tuple<Senders...> senders_;
 };
 
+} // namespace detail
+
 template <typename... Senders>
-when_all_sender<std::remove_cvref_t<Senders>...> when_all(
+detail::when_all_sender<std::remove_cvref_t<Senders>...> when_all(
     Senders&&... senders) {
-  return when_all_sender<std::remove_cvref_t<Senders>...>{(Senders &&)
-                                                              senders...};
+  return detail::when_all_sender<std::remove_cvref_t<Senders>...>{(Senders &&)
+                                                                  senders...};
 }
 
 } // namespace unifex

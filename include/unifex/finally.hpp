@@ -597,7 +597,6 @@ namespace unifex
         manual_lifetime<done_operation> completionDoneOp_;
       };
     };
-  }  // namespace detail
 
   template <typename SourceSender, typename CompletionSender>
   class finally_sender {
@@ -638,21 +637,20 @@ namespace unifex
         std::enable_if_t<
             is_connectable_v<
                 SourceSender,
-                detail::finally_receiver<
+                finally_receiver<
                     SourceSender,
                     CompletionSender,
                     Receiver>> &&
             is_connectable_v<
                 CompletionSender,
-                detail::finally_done_receiver<
+                finally_done_receiver<
                     SourceSender,
                     CompletionSender,
                     Receiver>>,
             int> = 0>
     friend auto tag_invoke(tag_t<connect>, finally_sender&& s, Receiver&& r)
-        -> detail::finally_operation<SourceSender, CompletionSender, Receiver> {
-      return detail::
-          finally_operation<SourceSender, CompletionSender, Receiver>{
+        -> finally_operation<SourceSender, CompletionSender, Receiver> {
+      return finally_operation<SourceSender, CompletionSender, Receiver>{
               static_cast<SourceSender&&>(s.source_),
               static_cast<CompletionSender&&>(s.completion_),
               static_cast<Receiver&&>(r)};
@@ -663,7 +661,7 @@ namespace unifex
     CompletionSender completion_;
   };
 
-  inline constexpr struct finally_cpo {
+  struct finally_cpo {
     template <
         typename SourceSender,
         typename CompletionSender,
@@ -679,5 +677,10 @@ namespace unifex
           static_cast<SourceSender&&>(source),
           static_cast<CompletionSender&&>(completion)};
     }
-  } finally;
+  };
+
+} // namespace detail
+
+inline constexpr detail::finally_cpo finally{};
+
 }  // namespace unifex

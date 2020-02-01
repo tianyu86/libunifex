@@ -29,91 +29,98 @@
 namespace unifex {
 
 template <typename T>
-struct task {
-  struct promise_type {
-    task get_return_object() noexcept {
-      return task{
-          coro::coroutine_handle<promise_type>::from_promise(*this)};
-    }
+class task;
 
-    coro::suspend_always initial_suspend() noexcept {
-      return {};
-    }
+namespace detail {
 
-    auto final_suspend() noexcept {
-      struct awaiter {
-        bool await_ready() {
-          return false;
-        }
-        auto await_suspend(
-            coro::coroutine_handle<promise_type> h) noexcept {
-          return h.promise().continuation_;
-        }
-        void await_resume() noexcept {}
-      };
-      return awaiter{};
-    }
+template<typename T>
+struct task_promise_type {
+  task<T> get_return_object() noexcept;
 
-    void unhandled_exception() noexcept {
-      reset_value();
-      exception_.construct(std::current_exception());
-      state_ = state::exception;
-    }
+  coro::suspend_always initial_suspend() noexcept {
+    return {};
+  }
 
-    template <
-        typename Value,
-        std::enable_if_t<std::is_convertible_v<Value, T>, int> = 0>
-    void return_value(Value&& value) noexcept(
-        std::is_nothrow_constructible_v<T, Value>) {
-      reset_value();
-      value_.construct((Value &&) value);
-      state_ = state::value;
-    }
-
-    promise_type() noexcept {}
-
-    ~promise_type() {
-      reset_value();
-    }
-
-    void reset_value() noexcept {
-      switch (std::exchange(state_, state::empty)) {
-        case state::value:
-          value_.destruct();
-          break;
-        case state::exception:
-          exception_.destruct();
-          break;
-        default:
-          break;
+  auto final_suspend() noexcept {
+    struct awaiter {
+      bool await_ready() {
+        return false;
       }
-    }
-
-    decltype(auto) result() {
-      if (state_ == state::exception) {
-        std::rethrow_exception(std::move(exception_).get());
+      auto await_suspend(
+          coro::coroutine_handle<task_promise_type> h) noexcept {
+        return h.promise().continuation_;
       }
-      return std::move(value_).get();
-    }
-
-    template <typename Func>
-    friend void
-    tag_invoke(tag_t<visit_continuations>, const promise_type& p, Func&& func) {
-      if (p.info_) {
-        visit_continuations(*p.info_, (Func &&) func);
-      }
-    }
-
-    enum class state { empty, value, exception };
-
-    coro::coroutine_handle<> continuation_;
-    state state_ = state::empty;
-    union {
-      manual_lifetime<T> value_;
-      manual_lifetime<std::exception_ptr> exception_;
+      void await_resume() noexcept {}
     };
-    std::optional<continuation_info> info_;
+    return awaiter{};
+  }
+
+  void unhandled_exception() noexcept {
+    reset_value();
+    exception_.construct(std::current_exception());
+    state_ = state::exception;
+  }
+
+  template <
+      typename Value,
+      std::enable_if_t<std::is_convertible_v<Value, T>, int> = 0>
+  void return_value(Value&& value) noexcept(
+      std::is_nothrow_constructible_v<T, Value>) {
+    reset_value();
+    value_.construct((Value &&) value);
+    state_ = state::value;
+  }
+
+  task_promise_type() noexcept {}
+
+  ~task_promise_type() {
+    reset_value();
+  }
+
+  void reset_value() noexcept {
+    switch (std::exchange(state_, state::empty)) {
+      case state::value:
+        value_.destruct();
+        break;
+      case state::exception:
+        exception_.destruct();
+        break;
+      default:
+        break;
+    }
+  }
+
+  decltype(auto) result() {
+    if (state_ == state::exception) {
+      std::rethrow_exception(std::move(exception_).get());
+    }
+    return std::move(value_).get();
+  }
+
+  template <typename Func>
+  friend void
+  tag_invoke(tag_t<visit_continuations>, const task_promise_type& p, Func&& func) {
+    if (p.info_) {
+      visit_continuations(*p.info_, (Func &&) func);
+    }
+  }
+
+  enum class state { empty, value, exception };
+
+  coro::coroutine_handle<> continuation_;
+  state state_ = state::empty;
+  union {
+    manual_lifetime<T> value_;
+    manual_lifetime<std::exception_ptr> exception_;
   };
+  std::optional<continuation_info> info_;
+};
+
+} // namespace detail
+
+template <typename T>
+struct task {
+  using promise_type = detail::task_promise_type<T>;
 
   coro::coroutine_handle<promise_type> coro_;
 
@@ -156,5 +163,15 @@ public:
     return awaiter{coro_};
   }
 };
+
+namespace detail {
+
+template<typename T>
+task<T> task_promise_type<T>::get_return_object() noexcept {
+  return task<T>{
+    coro::coroutine_handle<task_promise_type>::from_promise(*this)};
+}
+
+} // namespace detail
 
 } // namespace unifex

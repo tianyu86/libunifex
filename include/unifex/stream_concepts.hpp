@@ -20,7 +20,9 @@
 
 namespace unifex {
 
-inline constexpr struct next_cpo {
+namespace detail {
+
+struct next_cpo {
   template <typename Stream>
   friend auto tag_invoke(next_cpo, Stream& s) noexcept(noexcept(s.next()))
       -> decltype(s.next()) {
@@ -33,9 +35,9 @@ inline constexpr struct next_cpo {
           -> tag_invoke_result_t<next_cpo, Stream&> {
     return tag_invoke(*this, stream);
   }
-} next{};
+};
 
-inline constexpr struct cleanup_cpo {
+struct cleanup_cpo {
   template <typename Stream>
   friend auto tag_invoke(cleanup_cpo, Stream& s) noexcept(noexcept(s.cleanup()))
       -> decltype(s.cleanup()) {
@@ -48,7 +50,12 @@ inline constexpr struct cleanup_cpo {
           -> tag_invoke_result_t<cleanup_cpo, Stream&> {
     return tag_invoke(*this, stream);
   }
-} cleanup{};
+};
+
+} // namespace detail
+
+inline constexpr detail::next_cpo next{};
+inline constexpr detail::cleanup_cpo cleanup{};
 
 template <typename Stream>
 using next_sender_t = decltype(next(std::declval<Stream&>()));

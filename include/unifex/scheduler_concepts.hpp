@@ -23,7 +23,9 @@
 
 namespace unifex {
 
-inline constexpr struct schedule_cpo {
+namespace detail {
+  
+struct schedule_cpo {
   template <typename Scheduler>
   friend constexpr auto tag_invoke(schedule_cpo, Scheduler&& s) noexcept(
       noexcept(static_cast<Scheduler&&>(s).schedule()))
@@ -41,19 +43,26 @@ inline constexpr struct schedule_cpo {
   struct schedule_sender;
 
   constexpr schedule_sender operator()() const noexcept;
-} schedule;
+};
 
-inline constexpr struct get_scheduler_cpo {
+struct get_scheduler_cpo {
   template <typename Context>
   auto operator()(const Context &context) const noexcept
       -> tag_invoke_result_t<get_scheduler_cpo, const Context &> {
     static_assert(is_nothrow_tag_invocable_v<get_scheduler_cpo, const Context &>);
     static_assert(std::is_invocable_v<
-                  decltype(schedule),
+                  schedule_cpo,
                   tag_invoke_result_t<get_scheduler_cpo, const Context &>>);
     return tag_invoke(*this, context);
   }
-} get_scheduler;
+};
+
+} // namespace detail
+
+inline constexpr detail::schedule_cpo schedule{};
+inline constexpr detail::get_scheduler_cpo get_scheduler{};
+
+namespace detail {
 
 struct schedule_cpo::schedule_sender {
   template<
@@ -80,7 +89,7 @@ inline constexpr schedule_cpo::schedule_sender schedule_cpo::operator()() const 
   return {};
 }
 
-inline constexpr struct schedule_after_cpo {
+struct schedule_after_cpo {
   template <typename TimeScheduler, typename Duration>
   friend constexpr auto
   tag_invoke(schedule_after_cpo, TimeScheduler&& s, Duration&& d) noexcept(
@@ -132,9 +141,9 @@ inline constexpr struct schedule_after_cpo {
   constexpr schedule_after_sender<Duration> operator()(Duration d) const {
     return schedule_after_sender<Duration>{std::move(d)};
   }
-} schedule_after;
+};
 
-inline constexpr struct schedule_at_cpo {
+struct schedule_at_cpo {
   template <typename TimeScheduler, typename TimePoint>
   friend constexpr auto
   tag_invoke(schedule_at_cpo, TimeScheduler&& s, TimePoint&& tp) noexcept(
@@ -150,9 +159,9 @@ inline constexpr struct schedule_at_cpo {
       -> decltype(tag_invoke(*this, (TimeScheduler &&) s, (TimePoint &&) tp)) {
     return tag_invoke(*this, (TimeScheduler &&) s, (TimePoint &&) tp);
   }
-} schedule_at;
+};
 
-inline constexpr struct now_cpo {
+struct now_cpo {
   template <typename TimeScheduler>
   friend constexpr auto tag_invoke(now_cpo, TimeScheduler&& s) noexcept(
       noexcept(static_cast<TimeScheduler&&>(s).now()))
@@ -166,6 +175,12 @@ inline constexpr struct now_cpo {
           -> decltype(tag_invoke(*this, (TimeScheduler &&) ex)) {
     return tag_invoke(*this, (TimeScheduler &&) ex);
   }
-} now;
+};
+
+} // namespace detail
+
+inline constexpr detail::schedule_after_cpo schedule_after{};
+inline constexpr detail::schedule_at_cpo schedule_at{};
+inline constexpr detail::now_cpo now{};
 
 } // namespace unifex

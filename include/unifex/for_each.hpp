@@ -21,7 +21,9 @@
 
 namespace unifex {
 
-inline constexpr struct for_each_cpo {
+namespace detail {
+
+struct for_each_cpo {
   template <typename Stream, typename Func>
   friend auto tag_invoke(for_each_cpo, Stream&& stream, Func&& func) {
     return transform(
@@ -41,6 +43,10 @@ inline constexpr struct for_each_cpo {
           -> decltype(tag_invoke(*this, (Stream &&) stream, (Func &&) func)) {
     return tag_invoke(*this, (Stream &&) stream, (Func &&) func);
   }
-} for_each;
+};
+
+} // namespace detail
+
+inline constexpr detail::for_each_cpo for_each{};
 
 } // namespace unifex

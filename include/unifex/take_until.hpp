@@ -32,6 +32,8 @@
 
 namespace unifex {
 
+namespace detail {
+
 template<typename SourceStream, typename TriggerStream>
 struct take_until_stream {
  private:
@@ -440,10 +442,12 @@ public:
   }
 };
 
+} // namespace detail
+
 template<typename SourceStream, typename TriggerStream>
 auto take_until(SourceStream&& source, TriggerStream&& trigger) {
-  return take_until_stream<std::remove_cvref_t<SourceStream>,
-                           std::remove_cvref_t<TriggerStream>>{
+  return detail::take_until_stream<std::remove_cvref_t<SourceStream>,
+                                   std::remove_cvref_t<TriggerStream>>{
     (SourceStream&&)source,
     (TriggerStream&&)trigger};
 }

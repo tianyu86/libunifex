@@ -30,6 +30,8 @@
 
 namespace unifex {
 
+namespace detail {
+
 template <typename Predecessor, typename Successor>
 struct via_sender {
   UNIFEX_NO_UNIQUE_ADDRESS Predecessor pred_;
@@ -253,9 +255,11 @@ struct via_sender {
   }
 };
 
+} // namespace detail
+
 template <typename Predecessor, typename Successor>
 auto via(Successor&& succ, Predecessor&& pred) {
-  return via_sender<
+  return detail::via_sender<
       std::remove_cvref_t<Predecessor>,
       std::remove_cvref_t<Successor>>{(Predecessor &&) pred,
                                       (Successor &&) succ};

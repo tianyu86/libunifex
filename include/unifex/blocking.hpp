@@ -41,7 +41,9 @@ enum class blocking_kind {
   always_inline
 };
 
-inline constexpr struct blocking_cpo {
+namespace detail {
+
+struct blocking_cpo {
   template <typename Sender>
   friend constexpr blocking_kind tag_invoke(
       blocking_cpo,
@@ -55,6 +57,10 @@ inline constexpr struct blocking_cpo {
           -> decltype(tag_invoke(*this, s)) {
     return tag_invoke(*this, s);
   }
-} blocking;
+};
+
+} // namespace detail
+
+inline constexpr detail::blocking_cpo blocking{};
 
 } // namespace unifex

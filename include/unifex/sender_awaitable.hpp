@@ -32,6 +32,8 @@
 
 namespace unifex {
 
+namespace detail {
+
 template<typename Sender, typename Value>
 struct sender_awaiter {
 
@@ -148,11 +150,13 @@ private:
   std::optional<continuation_info> info_;
 };
 
+} // namespace detail
+
 template<
   typename Sender,
   typename Result = single_value_result_t<std::remove_reference_t<Sender>>>
 auto operator co_await(Sender&& sender) {
-  return sender_awaiter<Sender, Result>{(Sender&&)sender};
+  return detail::sender_awaiter<Sender, Result>{(Sender&&)sender};
 }
 
 template<
@@ -162,7 +166,7 @@ template<
         is_empty_list, is_empty_list>::value,
       int> = 0>
 auto operator co_await(Sender&& sender) {
-  return sender_awaiter<Sender, void>{(Sender&&)sender};
+  return detail::sender_awaiter<Sender, void>{(Sender&&)sender};
 }
 
-}
+} // namespace unifex

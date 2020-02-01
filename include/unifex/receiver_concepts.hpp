@@ -22,7 +22,9 @@
 
 namespace unifex {
 
-inline constexpr struct set_value_cpo {
+namespace detail {
+
+struct set_value_cpo {
   template <typename Receiver, typename... Values>
   friend auto
   tag_invoke(set_value_cpo, Receiver&& r, Values&&... values) noexcept(
@@ -39,9 +41,9 @@ inline constexpr struct set_value_cpo {
       std::is_void_v<tag_invoke_result_t<set_value_cpo, Receiver, Values...>>);
     return tag_invoke(*this, (Receiver &&) r, (Values &&) values...);
   }
-} set_value{};
+};
 
-inline constexpr struct set_error_cpo {
+struct set_error_cpo {
   template <typename Receiver, typename Error>
   friend auto tag_invoke(set_error_cpo, Receiver&& r, Error&& e) noexcept
       -> decltype(static_cast<Receiver&&>(r).set_error((Error &&) e)) {
@@ -62,9 +64,9 @@ inline constexpr struct set_error_cpo {
     );
     return tag_invoke(*this, (Receiver &&) r, (Error &&) error);
   }
-} set_error{};
+};
 
-inline constexpr struct set_done_cpo {
+struct set_done_cpo {
   template <typename Receiver>
   friend auto tag_invoke(set_done_cpo, Receiver&& r) noexcept
       -> decltype(static_cast<Receiver&&>(r).set_done()) {
@@ -83,13 +85,19 @@ inline constexpr struct set_done_cpo {
     static_assert(std::is_void_v<tag_invoke_result_t<set_done_cpo, Receiver>>);
     return tag_invoke(*this, (Receiver &&) r);
   }
-} set_done{};
+};
+
+} // namespace detail
+
+inline constexpr detail::set_value_cpo set_value{};
+inline constexpr detail::set_done_cpo set_done{};
+inline constexpr detail::set_error_cpo set_error{};
 
 template <typename T>
 constexpr bool is_receiver_cpo_v = is_one_of_v<
     std::remove_cvref_t<T>,
-    set_value_cpo,
-    set_error_cpo,
-    set_done_cpo>;
+    detail::set_value_cpo,
+    detail::set_error_cpo,
+    detail::set_done_cpo>;
 
 } // namespace unifex

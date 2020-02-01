@@ -25,10 +25,13 @@
 #include <functional>
 #include <typeindex>
 #include <vector>
+#include <type_traits>
 
 namespace unifex {
 
-inline constexpr struct visit_continuations_cpo {
+namespace detail {
+
+struct visit_continuations_cpo {
   template <typename Continuation, typename Func>
   friend void
   tag_invoke(visit_continuations_cpo, const Continuation&, Func&&) noexcept {}
@@ -60,7 +63,7 @@ inline constexpr struct visit_continuations_cpo {
         "tag_invoke() overload for visit_continuations() must return void");
     return tag_invoke(visit_continuations_cpo{}, c, (Func &&) func);
   }
-} visit_continuations;
+};
 
 class continuation_info {
  public:
@@ -82,7 +85,7 @@ class continuation_info {
 
   template <typename F>
   friend void
-  tag_invoke(tag_t<visit_continuations>, const continuation_info& c, F&& f) {
+  tag_invoke(visit_continuations_cpo, const continuation_info& c, F&& f) {
     c.vtable_->visit_(
         c.address_,
         [](const continuation_info& info, void* data) {
@@ -115,7 +118,7 @@ continuation_info continuation_info::from_continuation(
   static constexpr vtable_t vtable{
       typeid(std::remove_cvref_t<Continuation>),
       [](const void* address, callback_t* cb, void* data) {
-        visit_continuations(
+        visit_continuations_cpo{}(
             *static_cast<const Continuation*>(address),
             [cb, data](const auto& continuation) {
               cb(continuation_info::from_continuation(continuation), data);
@@ -124,6 +127,12 @@ continuation_info continuation_info::from_continuation(
   return continuation_info{static_cast<const void*>(std::addressof(r)),
                            &vtable};
 }
+
+} // namespace detail
+
+using detail::continuation_info;
+
+inline constexpr detail::visit_continuations_cpo visit_continuations{};
 
 struct async_trace_entry {
   async_trace_entry(

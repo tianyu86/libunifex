@@ -22,6 +22,8 @@
 
 namespace unifex {
 
+namespace detail {
+
 template <
     typename Stream,
     typename NextAdaptFunc,
@@ -58,9 +60,11 @@ struct both_adapted_stream {
   }
 };
 
+} // namespace detail
+
 template <typename Stream, typename AdapterFunc>
 auto adapt_stream(Stream&& stream, AdapterFunc&& adapt) {
-  return both_adapted_stream<
+  return detail::both_adapted_stream<
       std::remove_cvref_t<Stream>,
       std::remove_cvref_t<AdapterFunc>>{(Stream &&) stream,
                                         (AdapterFunc &&) adapt};
@@ -74,7 +78,7 @@ auto adapt_stream(
     Stream&& stream,
     NextAdapterFunc&& adaptNext,
     CleanupAdapterFunc&& adaptCleanup) {
-  return adapted_stream<
+  return detail::adapted_stream<
       std::remove_cvref_t<Stream>,
       std::remove_cvref_t<NextAdapterFunc>,
       std::remove_cvref_t<CleanupAdapterFunc>>{(Stream &&) stream,

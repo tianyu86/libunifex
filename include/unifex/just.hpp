@@ -26,6 +26,8 @@
 
 namespace unifex {
 
+namespace detail {
+
 template <typename... Values>
 class just_sender {
   UNIFEX_NO_UNIQUE_ADDRESS std::tuple<Values...> values_;
@@ -74,10 +76,12 @@ class just_sender {
   }
 };
 
+} // namespace detail
+
 template <typename... Values>
-just_sender<std::decay_t<Values>...> just(Values&&... values) noexcept(
+detail::just_sender<std::decay_t<Values>...> just(Values&&... values) noexcept(
     (std::is_nothrow_constructible_v<std::decay_t<Values>, Values> && ...)) {
-  return just_sender<std::decay_t<Values>...>{(Values &&) values...};
+  return detail::just_sender<std::decay_t<Values>...>{(Values &&) values...};
 }
 
 } // namespace unifex

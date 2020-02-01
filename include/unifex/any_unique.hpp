@@ -31,11 +31,11 @@ namespace detail {
 template <typename CPO, typename Sig = typename CPO::type_erased_signature_t>
 struct vtable_entry;
 
-template <typename CPO, typename Ret, typename... Args, bool NoExcept>
-struct vtable_entry<CPO, Ret(Args...) noexcept(NoExcept)> {
+template <typename CPO, typename Ret, typename... Args>
+struct vtable_entry<CPO, Ret(Args...) noexcept(true)> {
   using fn_t =
       Ret(detail::base_cpo_t<CPO>, replace_this_with_void_ptr_t<Args>...)
-      noexcept(NoExcept);
+      noexcept(true);
 
   constexpr fn_t* get() const noexcept {
     return fn_;
@@ -48,7 +48,39 @@ struct vtable_entry<CPO, Ret(Args...) noexcept(NoExcept)> {
     // return vtable_entry{&f};
     return vtable_entry{[](
           detail::base_cpo_t<CPO> cpo,
-          replace_this_with_void_ptr_t<Args>... args) noexcept(NoExcept) {
+          replace_this_with_void_ptr_t<Args>... args) noexcept(true) {
+        void* thisPointer = extract_this<Args...>{}(args...);
+        T& obj = *static_cast<T*>(thisPointer);
+        return std::move(cpo)(
+            replace_this<Args>::get((Args &&) args, obj)...);
+      }};
+  }
+
+ private:
+
+  explicit constexpr vtable_entry(fn_t* fn) noexcept : fn_(fn) {}
+
+  fn_t* fn_;
+};
+
+template <typename CPO, typename Ret, typename... Args>
+struct vtable_entry<CPO, Ret(Args...) noexcept(false)> {
+  using fn_t =
+      Ret(detail::base_cpo_t<CPO>, replace_this_with_void_ptr_t<Args>...)
+      noexcept(false);
+
+  constexpr fn_t* get() const noexcept {
+    return fn_;
+  }
+
+  template <typename T>
+  static constexpr vtable_entry create() noexcept {
+    // auto& f = vtable_entry::concrete_impl<T>;
+    // constexpr fn_t* f = &vtable_entry::concrete_impl<T>;
+    // return vtable_entry{&f};
+    return vtable_entry{[](
+          detail::base_cpo_t<CPO> cpo,
+          replace_this_with_void_ptr_t<Args>... args) noexcept(false) {
         void* thisPointer = extract_this<Args...>{}(args...);
         T& obj = *static_cast<T*>(thisPointer);
         return std::move(cpo)(
@@ -142,21 +174,20 @@ template <
     typename Derived,
     typename CPO,
     typename Ret,
-    typename... Args,
-    bool NoExcept>
+    typename... Args>
 struct with_type_erased_tag_invoke<
     Derived,
     CPO,
-    Ret(Args...) noexcept(NoExcept)> {
+    Ret(Args...) noexcept(true)> {
 private:
     template <typename T>
-    static void* get_object_address(T&& t) { return static_cast<T&&>(t).get_object_address(); }
+    static void* get_object_address(T&& t) noexcept { return static_cast<T&&>(t).get_object_address(); }
     template <typename T>
-    static auto  get_vtable(T&& t) { return static_cast<T&&>(t).get_vtable(); }
+    static auto get_vtable(T&& t) noexcept { return static_cast<T&&>(t).get_vtable(); }
 public:
   friend Ret tag_invoke(
       base_cpo_t<CPO> cpo,
-      replace_this_t<Args, Derived>... args) noexcept(NoExcept) {
+      replace_this_t<Args, Derived>... args) noexcept(true) {
     auto& t = extract_this<Args...>{}(args...);
     void* objPtr = get_object_address(t);
     auto* fnPtr = get_vtable(t)->template get<CPO>();
@@ -164,6 +195,33 @@ public:
         std::move(cpo),
         replace_this<Args>::get((Args &&) args, objPtr)...);
   }
+};
+
+template <
+  typename Derived,
+  typename CPO,
+  typename Ret,
+  typename... Args>
+struct with_type_erased_tag_invoke<
+  Derived,
+  CPO,
+  Ret(Args...) noexcept(false)> {
+  private:
+    template <typename T>
+    static void* get_object_address(T&& t) noexcept { return static_cast<T&&>(t).get_object_address(); }
+    template <typename T>
+    static auto get_vtable(T&& t) noexcept { return static_cast<T&&>(t).get_vtable(); }
+  public:
+    friend Ret tag_invoke(
+        base_cpo_t<CPO> cpo,
+        replace_this_t<Args, Derived>... args) noexcept(false) {
+      auto& t = extract_this<Args...>{}(args...);
+      void* objPtr = get_object_address(t);
+      auto* fnPtr = get_vtable(t)->template get<CPO>();
+      return fnPtr(
+          std::move(cpo),
+          replace_this<Args>::get((Args&&)args, objPtr)...);
+    }
 };
 
 template <
@@ -176,15 +234,32 @@ template <
     typename Derived,
     typename CPO,
     typename Ret,
-    typename... Args,
-    bool NoExcept>
+    typename... Args>
 struct with_forwarding_tag_invoke<
     Derived,
     CPO,
-    Ret(Args...) noexcept(NoExcept)> {
+    Ret(Args...) noexcept(false)> {
   friend Ret tag_invoke(
       detail::base_cpo_t<CPO> cpo,
-      replace_this_t<Args, Derived>... args) noexcept(NoExcept) {
+      replace_this_t<Args, Derived>... args) noexcept(false) {
+    auto& wrapper = extract_this<Args...>{}(args...);
+    auto& wrapped = wrapper.value;
+    return std::move(cpo)(replace_this<Args>::get((Args &&) args, wrapped)...);
+  }
+};
+
+template <
+    typename Derived,
+    typename CPO,
+    typename Ret,
+    typename... Args>
+struct with_forwarding_tag_invoke<
+    Derived,
+    CPO,
+    Ret(Args...) noexcept(true)> {
+  friend Ret tag_invoke(
+      detail::base_cpo_t<CPO> cpo,
+      replace_this_t<Args, Derived>... args) noexcept(true) {
     auto& wrapper = extract_this<Args...>{}(args...);
     auto& wrapped = wrapper.value;
     return std::move(cpo)(replace_this<Args>::get((Args &&) args, wrapped)...);

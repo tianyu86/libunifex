@@ -64,8 +64,9 @@ private:
     lock_sender(const lock_sender &) = delete;
     lock_sender(lock_sender &&) = default;
 
-    template <typename Receiver> class operation : waiter_base {
-      friend lock_sender;
+    template <typename Receiver>
+    class operation : waiter_base {
+    public:
 
       template <typename Receiver2>
       explicit operation(async_mutex &mutex, Receiver2 &&r) noexcept
@@ -78,6 +79,7 @@ private:
 
       operation(operation &&) = delete;
 
+    private:
       friend void tag_invoke(tag_t<start>, operation &op) noexcept {
         if (!op.mutex_.try_enqueue(&op)) {
           // Failed to enqueue because we acquired the lock

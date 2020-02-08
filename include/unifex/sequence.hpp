@@ -34,8 +34,14 @@ namespace unifex
 {
   namespace detail
   {
+    UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(sequence_operation)
+
     template <typename Predecessor, typename Successor, typename Receiver>
     class sequence_operation;
+
+    UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(sequence_operation)
+
+    UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(sequence_successor_receiver)
 
     template <typename Predecessor, typename Successor, typename Receiver>
     class sequence_successor_receiver {
@@ -98,6 +104,10 @@ namespace unifex
 
       operation_type* op_;
     };
+
+    UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(sequence_successor_receiver)
+
+    UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(sequence_predecessor_receiver)
 
     template <typename Predecessor, typename Successor, typename Receiver>
     class sequence_predecessor_receiver {
@@ -199,6 +209,10 @@ namespace unifex
       operation_type* op_;
     };
 
+    UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(sequence_predecessor_receiver)
+
+    UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(sequence_operation)
+
     template <typename Predecessor, typename Successor, typename Receiver>
     class sequence_operation {
     public:
@@ -264,6 +278,10 @@ namespace unifex
             succOp_;
       };
     };
+
+    UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(sequence_operation)
+
+    UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(sequence_sender)
 
   template <typename Predecessor, typename Successor>
   class sequence_sender {
@@ -412,6 +430,8 @@ namespace unifex
     UNIFEX_NO_UNIQUE_ADDRESS Successor successor_;
   };
 
+  UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(sequence_sender)
+
   struct sequence_cpo {
     // Sequencing a single sender is just the same as returning the sender
     // itself.
@@ -458,33 +478,37 @@ namespace unifex
     template <
         typename First,
         typename Second,
+        typename Third,
         typename... Rest,
         std::enable_if_t<
-            is_tag_invocable_v<sequence_cpo, First, Second, Rest...>,
+            is_tag_invocable_v<sequence_cpo, First, Second, Third, Rest...>,
             int> = 0>
-    auto operator()(First&& first, Second&& second, Rest&&... rest) const
+    auto operator()(First&& first, Second&& second, Third&& third, Rest&&... rest) const
         noexcept(
-            is_nothrow_tag_invocable_v<sequence_cpo, First, Second, Rest...>)
-            -> tag_invoke_result_t<sequence_cpo, First, Second, Rest...> {
+            is_nothrow_tag_invocable_v<sequence_cpo, First, Second, Third, Rest...>)
+            -> tag_invoke_result_t<sequence_cpo, First, Second, Third, Rest...> {
       return unifex::tag_invoke(
           *this,
           static_cast<First&&>(first),
           static_cast<Second&&>(second),
+          static_cast<Third&&>(third),
           static_cast<Rest&&>(rest)...);
     }
 
     template <
         typename First,
         typename Second,
+        typename Third,
         typename... Rest,
         std::enable_if_t<
-            !is_tag_invocable_v<sequence_cpo, First, Second, Rest...>,
+            !is_tag_invocable_v<sequence_cpo, First, Second, Third, Rest...>,
             int> = 0>
-    auto operator()(First&& first, Second&& second, Rest&&... rest) const
-        noexcept(is_nothrow_tag_invocable_v<First, Second, Rest...>)
+    auto operator()(First&& first, Second&& second, Third&& third, Rest&&... rest) const
+        noexcept(is_nothrow_tag_invocable_v<First, Second, Third, Rest...>)
             -> std::invoke_result_t<
                 sequence_cpo,
                 std::invoke_result_t<sequence_cpo, First, Second>,
+                Third,
                 Rest...> {
       // Fall-back to pair-wise invocation of the sequence() CPO.
       return operator()(

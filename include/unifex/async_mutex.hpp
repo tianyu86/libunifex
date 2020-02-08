@@ -81,12 +81,16 @@ private:
 
     private:
       friend void tag_invoke(tag_t<start>, operation &op) noexcept {
-        if (!op.mutex_.try_enqueue(&op)) {
-          // Failed to enqueue because we acquired the lock
-          // synchronously. Invoke the continuation inline
-          // without type-erasure here.
-          set_value((Receiver &&) op.receiver_);
-        }
+          op.try_enqueue();
+      }
+
+      bool try_enqueue() noexcept {
+          if (!mutex_.try_enqueue(this)) {
+              // Failed to enqueue because we acquired the lock
+              // synchronously. Invoke the continuation inline
+              // without type-erasure here.
+              set_value((Receiver&&)receiver_);
+          }
       }
 
       async_mutex &mutex_;

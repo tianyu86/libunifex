@@ -70,9 +70,7 @@ inline constexpr detail::start_cpo start{};
 inline constexpr detail::connect_cpo connect{};
 
 template <typename Sender, typename Receiver>
-using operation_t = decltype(connect(
-    std::declval<Sender>(),
-    std::declval<Receiver>()));
+using operation_t = std::invoke_result_t<decltype(connect), Sender, Receiver>;
 
 template <typename Sender, typename Receiver>
 inline constexpr bool is_connectable_v =

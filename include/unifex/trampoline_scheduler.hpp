@@ -58,7 +58,7 @@ private:
     operation_base* head_ = nullptr;
   };
 
-  class schedule_sender;
+  struct schedule_sender;
 
   template <typename Receiver>
   class operation final : operation_base {

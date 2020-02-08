@@ -43,7 +43,7 @@ class just_sender {
 
   template <typename... Values2>
   explicit just_sender(Values2&&... values) noexcept(
-      noexcept((std::is_nothrow_constructible_v<Values, Values2> && ...)))
+      std::is_nothrow_constructible_v<std::tuple<Values...>, Values2...>)
       : values_((Values2 &&) values...) {}
 
  private:
@@ -80,7 +80,9 @@ class just_sender {
 
 template <typename... Values>
 detail::just_sender<std::decay_t<Values>...> just(Values&&... values) noexcept(
-    (std::is_nothrow_constructible_v<std::decay_t<Values>, Values> && ...)) {
+    std::is_nothrow_constructible_v<
+        detail::just_sender<std::decay_t<Values>...>,
+        Values...>) {
   return detail::just_sender<std::decay_t<Values>...>{(Values &&) values...};
 }
 

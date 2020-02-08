@@ -119,7 +119,8 @@ struct task_promise_type {
 } // namespace detail
 
 template <typename T>
-struct task {
+class task {
+public:
   using promise_type = detail::task_promise_type<T>;
 
   coro::coroutine_handle<promise_type> coro_;

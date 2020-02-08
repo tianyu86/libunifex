@@ -32,3 +32,20 @@
 #cmakedefine01 UNIFEX_NO_COROUTINES
 #cmakedefine UNIFEX_COROUTINES_HEADER <@UNIFEX_COROUTINES_HEADER@>
 #cmakedefine UNIFEX_COROUTINES_NAMESPACE @UNIFEX_COROUTINES_NAMESPACE@
+
+// This defines a workaround for MSVC where a hidden friend gets injected
+// into the parent namespace and added to the overload set for ADL calls
+// even if that class does not appear in any of the argument types.
+// This ends up leading to recursive template definitions for constrained
+// tag_invoke() that invoke the same CPO on different types.
+//
+// So on MSVC we put each type that defines a tag_invoke() overload into
+// its own private namespace in the hope that this will help it to only
+// consider the tag_invoke() overloads when a type appears in the type-list.
+#if _MSC_VER
+# define UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(X) namespace X##_ns {
+# define UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(X) } using X##_ns::X;
+#else
+# define UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(X)
+# define UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(X)
+#endif

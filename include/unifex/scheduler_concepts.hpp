@@ -15,6 +15,7 @@
  */
 #pragma once
 
+#include <unifex/config.hpp>
 #include <unifex/sender_concepts.hpp>
 #include <unifex/tag_invoke.hpp>
 
@@ -25,28 +26,38 @@ namespace unifex {
 
 namespace detail {
   
+UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(schedule_sender)
+
+class schedule_sender;
+
+UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(schedule_sender)
+
 struct schedule_cpo {
-  template <typename Scheduler>
-  friend constexpr auto tag_invoke(schedule_cpo, Scheduler&& s) noexcept(
+  template <
+      typename Scheduler,
+      std::enable_if_t<!is_tag_invocable_v<schedule_cpo, Scheduler>, int> = 0>
+  constexpr auto operator()(Scheduler&& s) const noexcept(
       noexcept(static_cast<Scheduler&&>(s).schedule()))
       -> decltype(static_cast<Scheduler&&>(s).schedule()) {
     return static_cast<Scheduler&&>(s).schedule();
   }
 
-  template <typename Scheduler>
+  template <
+      typename Scheduler,
+      std::enable_if_t<is_tag_invocable_v<schedule_cpo, Scheduler>, int> = 0>
   constexpr auto operator()(Scheduler&& s) const
       noexcept(noexcept(tag_invoke(*this, static_cast<Scheduler&&>(s))))
           -> decltype(tag_invoke(*this, static_cast<Scheduler&&>(s))) {
     return tag_invoke(*this, static_cast<Scheduler&&>(s));
   }
 
-  struct schedule_sender;
-
   constexpr schedule_sender operator()() const noexcept;
 };
 
 struct get_scheduler_cpo {
-  template <typename Context>
+  template <
+      typename Context,
+      std::enable_if_t<is_tag_invocable_v<get_scheduler_cpo, Context>, int> = 0>
   auto operator()(const Context &context) const noexcept
       -> tag_invoke_result_t<get_scheduler_cpo, const Context &> {
     static_assert(is_nothrow_tag_invocable_v<get_scheduler_cpo, const Context &>);
@@ -64,7 +75,10 @@ inline constexpr detail::get_scheduler_cpo get_scheduler{};
 
 namespace detail {
 
-struct schedule_cpo::schedule_sender {
+UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(schedule_sender)
+
+class schedule_sender {
+public:
   template<
     template<typename...> class Variant,
     template<typename...> class Tuple>
@@ -85,21 +99,33 @@ struct schedule_cpo::schedule_sender {
   }
 };
 
-inline constexpr schedule_cpo::schedule_sender schedule_cpo::operator()() const noexcept {
+UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(schedule_sender)
+
+inline constexpr schedule_sender schedule_cpo::operator()() const noexcept {
   return {};
 }
 
+UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(schedule_after_sender)
+
+template<typename Duration>
+class schedule_after_sender;
+
+UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(schedule_after_sender)
+
 struct schedule_after_cpo {
-  template <typename TimeScheduler, typename Duration>
-  friend constexpr auto
-  tag_invoke(schedule_after_cpo, TimeScheduler&& s, Duration&& d) noexcept(
+    template <
+        typename TimeScheduler,
+        typename Duration,
+        std::enable_if_t<!is_tag_invocable_v<schedule_after_cpo, TimeScheduler, Duration>, int> = 0>
+  constexpr auto operator()(TimeScheduler&& s, Duration&& d) const noexcept(
       noexcept(static_cast<TimeScheduler&&>(s).schedule_after((Duration &&) d)))
-      -> decltype(static_cast<TimeScheduler&&>(s).schedule_after((Duration &&)
-                                                                     d)) {
+      -> decltype(static_cast<TimeScheduler&&>(s).schedule_after((Duration &&)d)) {
     return static_cast<TimeScheduler&&>(s).schedule_after((Duration &&) d);
   }
 
-  template <typename TimeScheduler, typename Duration>
+  template <
+      typename TimeScheduler,
+      typename Duration>
   constexpr auto operator()(TimeScheduler&& s, Duration&& d) const noexcept(
       noexcept(tag_invoke(*this, (TimeScheduler &&) s, (Duration &&) d)))
       -> decltype(tag_invoke(*this, (TimeScheduler &&) s, (Duration &&) d)) {
@@ -107,27 +133,33 @@ struct schedule_after_cpo {
   }
 
   template<typename Duration>
-  class schedule_after_sender {
-  public:
+  constexpr schedule_after_sender<Duration> operator()(Duration d) const;
+};
+
+UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_BEGIN(schedule_after_sender)
+
+template<typename Duration>
+class schedule_after_sender {
+public:
     template<template<typename...> class Variant, template<typename...> class Tuple>
     using value_types = Variant<Tuple<>>;
 
     template<template<typename...> class Variant>
     using error_types = Variant<std::exception_ptr>;
 
-    explicit schedule_after_sender(Duration d)
-    : duration_(d)
+    constexpr explicit schedule_after_sender(Duration d)
+        : duration_(d)
     {}
 
-  private:
+private:
     friend schedule_after_cpo;
 
     template<
-      typename Receiver,
-      typename Scheduler =
-        std::decay_t<std::invoke_result_t<decltype(get_scheduler), const Receiver&>>,
-      typename ScheduleAfterSender =
-        std::invoke_result_t<schedule_after_cpo, Scheduler&, const Duration&>>
+        typename Receiver,
+        typename Scheduler =
+            std::decay_t<std::invoke_result_t<decltype(get_scheduler), const Receiver&>>,
+        typename ScheduleAfterSender =
+            std::invoke_result_t<schedule_after_cpo, Scheduler&, const Duration&>>
     friend auto tag_invoke(tag_t<connect>, const schedule_after_sender& s, Receiver&& r)
         -> operation_t<ScheduleAfterSender, Receiver> {
       auto scheduler = get_scheduler(std::as_const(r));
@@ -135,13 +167,14 @@ struct schedule_after_cpo {
     }
 
     Duration duration_;
-  };
-
-  template<typename Duration>
-  constexpr schedule_after_sender<Duration> operator()(Duration d) const {
-    return schedule_after_sender<Duration>{std::move(d)};
-  }
 };
+
+UNIFEX_HIDDEN_FRIEND_NAMESPACE_FOR_END(schedule_after_sender)
+
+template<typename Duration>
+constexpr schedule_after_sender<Duration> schedule_after_cpo::operator()(Duration d) const {
+    return schedule_after_sender<Duration>{std::move(d)};
+}
 
 struct schedule_at_cpo {
   template <typename TimeScheduler, typename TimePoint>

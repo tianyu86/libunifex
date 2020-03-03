@@ -245,7 +245,7 @@ class thread_unsafe_event_loop {
  private:
   void enqueue(operation_base* op) noexcept;
 
-  template <typename T, typename StopToken>
+  template <typename T>
   class sync_wait_promise {
     enum class state { incomplete, done, value, error };
 
@@ -271,18 +271,8 @@ class thread_unsafe_event_loop {
         promise_.state_ = state::done;
       }
 
-      friend const StopToken& tag_invoke(
-          tag_t<get_stop_token>,
-          const receiver& r) noexcept {
-        return r.get_stop_token();
-      }
-
      private:
       friend sync_wait_promise;
-
-      StopToken& get_stop_token() const {
-        return promise_.stopToken_;
-      }
 
       explicit receiver(sync_wait_promise& promise) noexcept
           : promise_(promise) {}
@@ -291,8 +281,7 @@ class thread_unsafe_event_loop {
     };
 
    public:
-    explicit sync_wait_promise(StopToken&& stopToken) noexcept
-        : stopToken_((StopToken &&) stopToken) {}
+    sync_wait_promise() noexcept {}
 
     ~sync_wait_promise() {
       if (state_ == state::value) {
@@ -327,17 +316,15 @@ class thread_unsafe_event_loop {
     };
 
     state state_ = state::incomplete;
-    StopToken stopToken_;
   };
 
  public:
   template <
       typename Sender,
-      typename StopToken = unstoppable_token,
       typename Result = single_value_result_t<std::remove_cvref_t<Sender>>>
-  std::optional<Result> sync_wait(Sender&& sender, StopToken st = {}) {
-    using promise_t = sync_wait_promise<Result, StopToken&&>;
-    promise_t promise{(StopToken &&) st};
+  std::optional<Result> sync_wait(Sender&& sender) {
+    using promise_t = sync_wait_promise<Result>;
+    promise_t promise;
 
     auto op = connect((Sender &&) sender, promise.get_receiver());
     start(op);

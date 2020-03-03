@@ -17,9 +17,7 @@
 
 #include <unifex/manual_lifetime.hpp>
 #include <unifex/sender_concepts.hpp>
-#include <unifex/unstoppable_token.hpp>
 #include <unifex/blocking.hpp>
-#include <unifex/get_stop_token.hpp>
 
 #include <condition_variable>
 #include <exception>
@@ -55,13 +53,13 @@ struct sync_wait_promise {
   state state_ = state::incomplete;
 };
 
-template <typename T, typename StopToken>
+template <typename T>
 struct sync_wait_receiver {
   sync_wait_promise<T>& promise_;
-  StopToken stopToken_;
+
 
   template <typename... Values>
-      void set_value(Values&&... values) && noexcept {
+  void set_value(Values&&... values) && noexcept {
     std::lock_guard lock{promise_.mutex_};
     try {
       promise_.value_.construct((Values &&) values...);
@@ -90,11 +88,6 @@ struct sync_wait_receiver {
     promise_.state_ = sync_wait_promise<T>::state::done;
     promise_.cv_.notify_one();
   }
-
-  friend const StopToken& tag_invoke(
-      tag_t<get_stop_token>, const sync_wait_receiver& r) noexcept {
-    return r.stopToken_;
-  }
 };
 
 template<typename T>
@@ -118,10 +111,9 @@ struct thread_unsafe_sync_wait_promise {
   state state_ = state::incomplete;
 };
 
-template<typename T, typename StopToken>
+template<typename T>
 struct thread_unsafe_sync_wait_receiver {
   thread_unsafe_sync_wait_promise<T>& promise_;
-  StopToken stopToken_;
 
   template <typename... Values>
   void set_value(Values&&... values) && noexcept {
@@ -147,20 +139,14 @@ struct thread_unsafe_sync_wait_receiver {
   void set_done() && noexcept {
     promise_.state_ = thread_unsafe_sync_wait_promise<T>::state::done;
   }
-
-  friend const StopToken& tag_invoke(
-      tag_t<get_stop_token>, const thread_unsafe_sync_wait_receiver& r) noexcept {
-    return r.stopToken_;
-  }
 };
 
 } // namespace detail
 
 template <
     typename Sender,
-    typename StopToken = unstoppable_token,
     typename Result = single_value_result_t<std::remove_cvref_t<Sender>>>
-auto sync_wait(Sender&& sender, StopToken&& stopToken = {})
+auto sync_wait(Sender&& sender)
     -> std::optional<Result> {
   auto blockingResult = blocking(sender);
   if (blockingResult == blocking_kind::always ||
@@ -170,8 +156,7 @@ auto sync_wait(Sender&& sender, StopToken&& stopToken = {})
 
     auto operation = connect(
       (Sender&&)sender,
-      detail::thread_unsafe_sync_wait_receiver<Result, StopToken&&>{
-        promise, (StopToken&&)stopToken});
+      detail::thread_unsafe_sync_wait_receiver<Result>{promise});
 
     start(operation);
 
@@ -194,8 +179,7 @@ auto sync_wait(Sender&& sender, StopToken&& stopToken = {})
     // Store state for the operation on the stack.
     auto operation = connect(
         ((Sender &&) sender),
-        detail::sync_wait_receiver<Result, StopToken&&>{
-          promise, (StopToken&&)stopToken});
+        detail::sync_wait_receiver<Result>{promise});
 
     start(operation);
 
@@ -218,12 +202,11 @@ auto sync_wait(Sender&& sender, StopToken&& stopToken = {})
 
 template <
   typename Result,
-  typename Sender,
-  typename StopToken = unstoppable_token>
-decltype(auto) sync_wait_r(Sender&& sender, StopToken&& stopToken = {}) {
+  typename Sender>
+decltype(auto) sync_wait_r(Sender&& sender) {
   return sync_wait<
-    Sender, StopToken, non_void_t<wrap_reference_t<decay_rvalue_t<Result>>>>(
-      (Sender&&)sender, (StopToken&&)stopToken);
+    Sender, non_void_t<wrap_reference_t<decay_rvalue_t<Result>>>>(
+      (Sender&&)sender);
 }
 
 } // namespace unifex

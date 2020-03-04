@@ -23,11 +23,12 @@
 #include <unifex/stop_token_concepts.hpp>
 #include <unifex/tag_invoke.hpp>
 
-#include <type_traits>
-#include <tuple>
-#include <variant>
-#include <optional>
 #include <atomic>
+#include <functional>
+#include <optional>
+#include <tuple>
+#include <type_traits>
+#include <variant>
 
 namespace unifex
 {

@@ -63,8 +63,8 @@ template <
     typename... Rest>
 struct _operation_tuple<Index, Receiver, First, Rest...>::type
   : operation_tuple<Index + 1, Receiver, Rest...> {
-  template <typename Parent>
-  explicit type(Parent& parent, First&& first, Rest&&... rest)
+  template <typename First2, typename Parent>
+  explicit type(Parent& parent, First2&& first, Rest&&... rest)
     : operation_tuple<Index + 1, Receiver, Rest...>{parent, (Rest &&) rest...},
       op_(connect((First &&) first, Receiver<Index>{parent})) {}
 
@@ -194,9 +194,10 @@ struct _op<Receiver, Senders...>::type {
   template<std::size_t Index, typename Operation>
   friend class _element_receiver;
 
-  explicit type(Receiver&& receiver, Senders&&... senders)
+  template<typename... Senders2>
+  explicit type(Receiver&& receiver, Senders2&&... senders)
     : receiver_((Receiver &&) receiver),
-      ops_(*this, (Senders &&) senders...) {}
+      ops_(*this, (Senders2 &&) senders...) {}
 
   void start() noexcept {
     stopCallback_.construct(
@@ -243,9 +244,9 @@ struct _op<Receiver, Senders...>::type {
   }
 
   std::tuple<std::optional<
-      typename Senders::template value_types<std::variant, std::tuple>>...>
+      typename std::remove_cvref_t<Senders>::template value_types<std::variant, std::tuple>>...>
       values_;
-  std::optional<error_types<std::variant, Senders...>> error_;
+  std::optional<error_types<std::variant, std::remove_cvref_t<Senders>...>> error_;
   std::atomic<std::size_t> refCount_{sizeof...(Senders)};
   std::atomic<bool> doneOrError_{false};
   inplace_stop_source stopSource_;
@@ -290,6 +291,20 @@ class _sender<Senders...>::type {
       return operation<Receiver, Senders...>{
           (Receiver &&) receiver, (Senders &&) senders...};
     }, std::move(senders_));
+  }
+  template <typename Receiver>
+  operation<Receiver, Senders&...> connect(Receiver&& receiver) & {
+    return std::apply([&](Senders&... senders) {
+      return operation<Receiver, Senders&...>{
+          (Receiver &&) receiver, senders...};
+    }, senders_);
+  }
+  template <typename Receiver>
+  operation<Receiver, const Senders&...> connect(Receiver&& receiver) const & {
+    return std::apply([&](const Senders&... senders) {
+      return operation<Receiver, const Senders&...>{
+          (Receiver &&) receiver, senders...};
+    }, senders_);
   }
 
  private:
